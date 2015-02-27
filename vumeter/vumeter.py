@@ -23,12 +23,10 @@
 ##
 
 import sys
-import gobject
 
-import pygst
-pygst.require('0.10')
-import gst
-
+import gi
+gi.require_version('Gst', '1.0')
+from gi.repository import Gst, GObject
 
 def clamp(x, min, max):
     if x < min:
@@ -39,14 +37,17 @@ def clamp(x, min, max):
 
 class R3Ari():
     def __init__(self):
-        self.mainloop_ = gobject.MainLoop()
+        GObject.threads_init()
+        Gst.init(None)
+        self.mainloop_ = GObject.MainLoop()
+        self.pipeline_ = None
 
     def error(self, message, arg=None):
         print "ERROR: %s (%s)" % (message, arg)
 
     def on_message(self, bus, message):
-        if  message.structure.get_name() == 'level':
-            s = message.structure
+        s = message.get_structure()
+        if s.get_name() == 'level':
             sys.stdout.write("\r")
             for i in range(0, len(s['peak'])):
                 decay = clamp(s['decay'][i], -90.0, 0.0)
@@ -62,22 +63,23 @@ class R3Ari():
 
     def run(self):
         try:
-            s = 'alsasrc ! audio/x-raw-int,channels=2 ! level message=true ! fakesink'
-            self.pipeline_ = gst.parse_launch(s)
+            s = 'alsasrc ! audio/x-raw,channels=2 ! level message=true ! fakesink'
+            self.pipeline_ = Gst.parse_launch(s)
             self.pipeline_.get_bus().add_signal_watch()
             self.watch_id_ = self.pipeline_.get_bus().connect('message::element', self.on_message)
-            self.pipeline_.set_state(gst.STATE_PLAYING)
+            self.pipeline_.set_state(Gst.State.PLAYING)
 
             self.mainloop_.run()
 
-        except gobject.GError, e:
+        except GObject.GError, e:
             self.error('Could not create pipeline', e.__str__)
         except KeyboardInterrupt:
             pass
         finally:
-            self.pipeline_.get_bus().disconnect(self.watch_id_)
-            self.pipeline_.get_bus().remove_signal_watch()
-            self.pipeline_.set_state(gst.STATE_NULL)
+            if self.pipeline_:
+                self.pipeline_.get_bus().disconnect(self.watch_id_)
+                self.pipeline_.get_bus().remove_signal_watch()
+                self.pipeline_.set_state(Gst.State.NULL)
 
 if __name__ == '__main__':
     a = R3Ari()
