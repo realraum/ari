@@ -75,7 +75,7 @@ class R3Ari():
             self.mainloop_.run()
 
         except GObject.GError, e:
-            self.error('Could not create pipeline', e.__str__)
+            self.error('Could not create pipeline', e.message)
         except KeyboardInterrupt:
             pass
         finally:
