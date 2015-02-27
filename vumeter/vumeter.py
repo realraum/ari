@@ -23,6 +23,7 @@
 ##
 
 import sys
+import getopt
 
 import gi
 gi.require_version('Gst', '1.0')
@@ -36,9 +37,11 @@ def clamp(x, min, max):
     return x
 
 class R3Ari():
-    def __init__(self):
+    def __init__(self, device, channels):
         GObject.threads_init()
         Gst.init(None)
+        self.device_ = device
+        self.channels_ = channels
         self.mainloop_ = GObject.MainLoop()
         self.pipeline_ = None
 
@@ -63,7 +66,7 @@ class R3Ari():
 
     def run(self):
         try:
-            s = 'alsasrc ! audio/x-raw,channels=2 ! level message=true ! fakesink'
+            s = 'alsasrc device=%s ! audio/x-raw,channels=%i ! level message=true ! fakesink' % (self.device_, self.channels_)
             self.pipeline_ = Gst.parse_launch(s)
             self.pipeline_.get_bus().add_signal_watch()
             self.watch_id_ = self.pipeline_.get_bus().connect('message::element', self.on_message)
@@ -82,5 +85,41 @@ class R3Ari():
                 self.pipeline_.set_state(Gst.State.NULL)
 
 if __name__ == '__main__':
-    a = R3Ari()
+    usage = '''realraum Audience Reaction Indicator.
+Usage:
+    vumeter.py --device <alsa device> --channels <num>
+
+Options:
+    -h, --help              this help message.
+    -v, --version           version info.
+    --device=N              the alsa device to open (default: 'default').
+    --channels=N            number of audio channels (default: 2).
+'''
+
+    device = 'default'
+    channels = 2
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "hv", ["help", "version", "device=", "channels=" ])
+        for o, a in opts:
+            if o in ("-h", "--help"):
+                print >> sys.stderr, usage
+                sys.exit(0)
+            elif o in ("-v", "--version"):
+                print >> sys.stderr, "Gstreamer Version %d.%d.%d.%d" % Gst.version()
+                sys.exit(0)
+            elif o == "--device":
+                device = a
+            elif o == "--channels":
+                channels = int(a)
+
+        if len(args) > 1:
+            raise getopt.GetoptError('Too many arguments')
+
+    except getopt.GetoptError, msg:
+        print >> sys.stderr, "ERROR: %s" % msg
+        print >> sys.stderr, usage
+        sys.exit(2)
+
+
+    a = R3Ari(device, channels)
     a.run()
