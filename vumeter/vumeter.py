@@ -1,25 +1,26 @@
 #!/usr/bin/env python
 ##
-##  r3ari
+##  ari
+##
+##  the realraum audience response indicator
 ##
 ##
 ##  Copyright (C) 2015 Christian Pointner <equinox@spreadspace.org>
 ##
+##  This file is part of ari.
 ##
-##  This file is part of r3ari.
-##
-##  r3ari is free software: you can redistribute it and/or modify
+##  ari is free software: you can redistribute it and/or modify
 ##  it under the terms of the GNU General Public License as published by
 ##  the Free Software Foundation, either version 3 of the License, or
 ##  any later version.
 ##
-##  r3ari is distributed in the hope that it will be useful,
+##  ari is distributed in the hope that it will be useful,
 ##  but WITHOUT ANY WARRANTY; without even the implied warranty of
 ##  MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ##  GNU General Public License for more details.
 ##
 ##  You should have received a copy of the GNU General Public License
-##  along with r3ari. If not, see <http://www.gnu.org/licenses/>.
+##  along with ari. If not, see <http://www.gnu.org/licenses/>.
 ##
 
 import sys
