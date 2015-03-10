@@ -24,12 +24,12 @@
 
 NAME := ari
 BOARD_TYPE := teenstep
-OBJ := $(NAME).o
+OBJ := $(NAME).o pump.o
 LIBS := util led lufa-descriptor-usbserial usbio
 EXTERNAL_LIBS := lufa
 SPREADAVR_PATH := ../contrib/avr-utils
 RESET_FUNC := $(SPREADAVR_PATH)/tools/reset_lufa_cdc
-RESET_PARAM := 'r'
+RESET_PARAM := '!'
 
 LUFA_PATH := $(SPREADAVR_PATH)/contrib/LUFA-120219
 LUFA_OPTS  = -D USB_DEVICE_ONLY
