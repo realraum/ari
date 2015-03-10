@@ -38,9 +38,6 @@
 void handle_cmd(uint8_t cmd)
 {
   switch(cmd) {
-  case '0': led_off(); break;
-  case '1': led_on(); break;
-  case 't': led_toggle(); break;
   case 'l': pump_start(left); break;
   case 'r': pump_start(right); break;
   case 's': pump_stop(); break;
