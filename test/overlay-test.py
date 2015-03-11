@@ -138,13 +138,13 @@ class R3Ari():
         svg += "  <rect x='%i' y='%i' width='%i' height='%i' style='fill:url(#vumeter);opacity:0.9' />\n" %(
             box_x + self.meter_spacing_, box_y + self.meter_spacing_, self.meter_width_*l, self.meter_height_)
         svg += "  <line x1='%i' y1='%i' x2='%i' y2='%i' style='stroke:rgb(255,0,0);stroke-width:3' />\n" %(
-            self.meter_width_*lp, box_y + self.meter_spacing_, self.meter_width_*lp, box_y + self.meter_spacing_ + self.meter_height_)
+            box_x + self.meter_width_*lp, box_y + self.meter_spacing_, box_x + self.meter_width_*lp, box_y + self.meter_spacing_ + self.meter_height_)
 
         svg += "  <rect x='%i' y='%i' width='%i' height='%i' style='fill:url(#vumeter);opacity:0.9' />\n" %(
             box_x + self.meter_spacing_, box_y + self.meter_height_ + 2*self.meter_spacing_, self.meter_width_*r, self.meter_height_)
         svg += "  <line x1='%i' y1='%i' x2='%i' y2='%i' style='stroke:rgb(255,0,0);stroke-width:3' />\n" %(
-            self.meter_width_*rp, box_y + self.meter_height_ + 2*self.meter_spacing_,
-            self.meter_width_*rp, box_y + 2*self.meter_spacing_ + 2*self.meter_height_)
+            box_x + self.meter_width_*rp, box_y + self.meter_height_ + 2*self.meter_spacing_,
+            box_x + self.meter_width_*rp, box_y + 2*self.meter_spacing_ + 2*self.meter_height_)
 
         svg += "</svg>\n"
 
