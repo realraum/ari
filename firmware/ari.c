@@ -21,7 +21,6 @@
  *  along with ari. If not, see <http://www.gnu.org/licenses/>.
  */
 
-
 #include <avr/io.h>
 #include <avr/wdt.h>
 #include <avr/interrupt.h>
