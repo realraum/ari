@@ -48,61 +48,80 @@ class R3Ari():
         self.l = 0.3
         self.r = 0.7
 
+    def info(self, message, arg=None):
+        print "INFO: %s (%s)" % (message, arg)
+
+    def warn(self, message, arg=None):
+        print "WARNING: %s (%s)" % (message, arg)
+
     def error(self, message, arg=None):
         print "ERROR: %s (%s)" % (message, arg)
 
     def on_message(self, bus, message):
-        s = message.get_structure()
-        if s.get_name() == 'level':
-            sys.stdout.write("\r")
-            for i in range(0, len(s['peak'])):
-                decay = clamp(s['decay'][i], -90.0, 0.0)
-                peak = clamp(s['peak'][i], -90.0, 0.0)
-                # if peak > decay:
-                #     print "ERROR: peak bigger than decay!"
+        t = message.type
+        if t == Gst.MessageType.EOS:
+            self.info("got EOS - closing application")
+            self.mainloop_.quit()
+        elif t == Gst.MessageType.INFO:
+            self.info(message.parse_info())
+        elif t == Gst.MessageType.WARNING:
+            self.warn(message.parse_warning())
+        elif t == Gst.MessageType.ERROR:
+            self.error(message.parse_error())
+            self.mainloop_.quit()
 
-                sys.stdout.write("channel %d: %3.2f / %3.2f,   " % (i, decay, peak))
-
-            sys.stdout.flush()
+#        s = message.get_structure()
+#        if s.get_name() == 'level':
+#            sys.stdout.write("\r")
+#            for i in range(0, len(s['peak'])):
+#                decay = clamp(s['decay'][i], -90.0, 0.0)
+#                peak = clamp(s['peak'][i], -90.0, 0.0)
+#                # if peak > decay:
+#                #     print "ERROR: peak bigger than decay!"
+#
+#                sys.stdout.write("channel %d: %3.2f / %3.2f,   " % (i, decay, peak))
+#
 
         return True
 
     def run(self):
         try:
-            s = 'videotestsrc is-live=true  !xvimagesink' % ()
             self.pipeline_ = Gst.Pipeline.new()
 
-            source = "videotestsrc is-live=true"
-            caps = "video/x-raw,width=%i,height=%i,framerate=50/2" % (self.video_width_, self.video_height_)
-            source_bin = Gst.parse_bin_from_description("%s ! %s ! identity name=videosrc" % (source, caps), "source")
+#            source = 'decklinksrc name=src device-number=%s mode=%s connection=%s audio-input=%s'  % ("0", "10", "0", "0")
+#            source += '   src.videosrc ! queue name=videosrc'
+#            source += '   src.audiosrc ! queue name=audiosrc'
+	    source = "tcpclientsrc host=localhost port=1234 ! queue ! gdpdepay"
+            source_bin = Gst.parse_bin_from_description(source, "source")
             self.pipeline_.add(source_bin)
 
-            conv1 = Gst.ElementFactory.make("videoconvert")
-            self.pipeline_.add(conv1)
-            q1 = Gst.ElementFactory.make("queue")
-            self.pipeline_.add(q1)
+            decoder = Gst.ElementFactory.make("decodebin")
+            self.pipeline_.add(decoder)
+
+            conv_vin = Gst.ElementFactory.make("videoconvert")
+            self.pipeline_.add(conv_vin)
 
             overlay = Gst.ElementFactory.make("rsvgoverlay")
             overlay.set_property("data", self.getVumeterSVG(0, 0, 0, 0))
             self.pipeline_.add(overlay)
-            GObject.timeout_add(20, self.updateMeter, overlay)
 
-            conv2 = Gst.ElementFactory.make("videoconvert")
-            self.pipeline_.add(conv2)
+            conv_vout = Gst.ElementFactory.make("videoconvert")
+            self.pipeline_.add(conv_vout)
             sink = Gst.ElementFactory.make("xvimagesink")
             self.pipeline_.add(sink)
 
-            source_bin.link(q1)
-            q1.link(conv1)
+            source_bin.link(decoder)
+            decoder.connect("pad-added", self.decoder_callback, conv_vin)
+            conv_vin.link(overlay)
+            overlay.link(conv_vout)
+            conv_vout.link(sink)
 
-            conv1.link(overlay)
-            overlay.link(conv2)
-
-            conv2.link(sink)
 
             self.pipeline_.get_bus().add_signal_watch()
-            self.watch_id_ = self.pipeline_.get_bus().connect('message::element', self.on_message)
+            self.watch_id_ = self.pipeline_.get_bus().connect('message', self.on_message)
             self.pipeline_.set_state(Gst.State.PLAYING)
+
+            GObject.timeout_add(20, self.updateMeter, overlay)
 
             self.mainloop_.run()
 
@@ -115,6 +134,11 @@ class R3Ari():
                 self.pipeline_.get_bus().disconnect(self.watch_id_)
                 self.pipeline_.get_bus().remove_signal_watch()
                 self.pipeline_.set_state(Gst.State.NULL)
+
+
+    def decoder_callback(self, decoder, pad, conv):
+        pad.link(conv.get_static_pad("sink"))
+
 
     def getVumeterSVG(self, l, lp, r, rp):
         svg = "<svg>\n"
