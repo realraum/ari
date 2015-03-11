@@ -38,7 +38,14 @@ class R3Ari():
         self.mainloop_ = GObject.MainLoop()
         self.pipeline_ = None
         self.watch_id_ = None
-        self.size_ = 10
+        self.video_width_ = 640
+        self.video_height_ = 480
+        self.meter_width_ = 560
+        self.meter_height_ = 23
+        self.meter_spacing_ = 7
+
+        self.l = 0.3
+        self.r = 0.7
 
     def error(self, message, arg=None):
         print "ERROR: %s (%s)" % (message, arg)
@@ -68,7 +75,8 @@ class R3Ari():
             source.set_property("is-live", True)
             self.pipeline_.add(source)
             filter = Gst.ElementFactory.make("capsfilter")
-            filter.set_property("caps", Gst.Caps.from_string("video/x-raw,format=I420,width=1280,height=720,framerate=50/1"))
+            caps = Gst.Caps.from_string("video/x-raw,format=I420,width=%i,height=%i,framerate=50/1" % (self.video_width_, self.video_height_))
+            filter.set_property("caps", caps)
             self.pipeline_.add(filter)
             conv1 = Gst.ElementFactory.make("videoconvert")
             self.pipeline_.add(conv1)
@@ -76,7 +84,7 @@ class R3Ari():
             self.pipeline_.add(q1)
 
             overlay = Gst.ElementFactory.make("rsvgoverlay")
-            overlay.set_property("data", "<svg><circle cx='320' cy='240' r='%i' fill='red' /></svg>" % self.size_)
+            overlay.set_property("data", self.getVumeterSVG(0, 0, 0, 0))
             self.pipeline_.add(overlay)
             GObject.timeout_add(20, self.updateMeter, overlay)
 
@@ -110,9 +118,50 @@ class R3Ari():
                 self.pipeline_.get_bus().remove_signal_watch()
                 self.pipeline_.set_state(Gst.State.NULL)
 
+    def getVumeterSVG(self, l, lp, r, rp):
+        svg = "<svg>\n"
+        svg += "  <defs>\n"
+        svg += "    <linearGradient id='vumeter' x1='0%' y1='0%' x2='100%' y2='0%'>\n"
+        svg += "      <stop offset='0%' style='stop-color:rgb(0,255,0);stop-opacity:1' />\n"
+        svg += "      <stop offset='100%' style='stop-color:rgb(255,0,0);stop-opacity:1' />\n"
+        svg += "    </linearGradient>\n"
+        svg += "  </defs>\n"
+
+        box_w = self.meter_width_ + 2*self.meter_spacing_
+        box_h = 2*self.meter_height_ + 3*self.meter_spacing_
+        box_x = (self.video_width_ - box_w)/2
+        box_y = self.meter_spacing_
+
+        svg += "  <rect x='%i' y='%i' rx='%i' ry='%i' width='%i' height='%i' style='fill:black;opacity:0.3' />\n" %(
+            box_x, box_y, self.meter_spacing_, self.meter_spacing_, box_w, box_h)
+
+        svg += "  <rect x='%i' y='%i' width='%i' height='%i' style='fill:url(#vumeter);opacity:0.9' />\n" %(
+            box_x + self.meter_spacing_, box_y + self.meter_spacing_, self.meter_width_*l, self.meter_height_)
+        svg += "  <line x1='%i' y1='%i' x2='%i' y2='%i' style='stroke:rgb(255,0,0);stroke-width:3' />\n" %(
+            self.meter_width_*lp, box_y + self.meter_spacing_, self.meter_width_*lp, box_y + self.meter_spacing_ + self.meter_height_)
+
+        svg += "  <rect x='%i' y='%i' width='%i' height='%i' style='fill:url(#vumeter);opacity:0.9' />\n" %(
+            box_x + self.meter_spacing_, box_y + self.meter_height_ + 2*self.meter_spacing_, self.meter_width_*r, self.meter_height_)
+        svg += "  <line x1='%i' y1='%i' x2='%i' y2='%i' style='stroke:rgb(255,0,0);stroke-width:3' />\n" %(
+            self.meter_width_*rp, box_y + self.meter_height_ + 2*self.meter_spacing_,
+            self.meter_width_*rp, box_y + 2*self.meter_spacing_ + 2*self.meter_height_)
+
+        svg += "</svg>\n"
+
+        return svg
+
     def updateMeter(self, overlay):
-        self.size_ = self.size_ + 1 if self.size_ < 250 else 10
-        overlay.set_property("data", "<svg><circle cx='320' cy='240' r='%i' fill='red' /></svg>" % self.size_)
+        self.l += 0.01
+        if self.l > 0.9:
+            self.l = 0.0
+        lp = self.l + 0.1
+
+        self.r += 0.01
+        if self.r > 0.9:
+            self.r = 0.0
+        rp = self.r + 0.1
+
+        overlay.set_property("data", self.getVumeterSVG(self.l, lp, self.r, rp))
         return True
 
 if __name__ == '__main__':
