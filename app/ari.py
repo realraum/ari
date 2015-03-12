@@ -50,11 +50,11 @@ class R3Ari():
         self.pipeline_ = None
         self.watch_id_ = None
 
-        self.video_width_ = 1920
-        self.video_height_ = 1080
-        self.meter_width_ = 1200
-        self.meter_height_ = 23
-        self.meter_spacing_ =  12
+        self.video_width_ = 1280
+        self.video_height_ = 720
+        self.meter_width_ = 0.75*self.video_width_
+        self.meter_height_ = 0.03*self.video_height_
+        self.meter_spacing_ =  0.4*self.meter_height_
         self.threshold_ = 0.3
 
     def info(self, message, arg=None):
@@ -99,32 +99,45 @@ class R3Ari():
 	    source = "tcpclientsrc host=localhost port=1234 ! queue ! gdpdepay"
             source_bin = Gst.parse_bin_from_description(source, "source")
             self.pipeline_.add(source_bin)
-
             decoder = Gst.ElementFactory.make("decodebin")
             self.pipeline_.add(decoder)
+
 
             q_vin = Gst.ElementFactory.make("queue")
             self.pipeline_.add(q_vin)
             conv_vin = Gst.ElementFactory.make("videoconvert")
             self.pipeline_.add(conv_vin)
-            veffect = Gst.ElementFactory.make("identity")
-            self.pipeline_.add(veffect)
-            conv_vin2 = Gst.ElementFactory.make("videoconvert")
-            self.pipeline_.add(conv_vin2)
+
+            scale_vin = Gst.ElementFactory.make("videoscale")
+            self.pipeline_.add(scale_vin)
+            cf_vin = Gst.ElementFactory.make("capsfilter")
+            caps_vin = Gst.Caps.from_string("video/x-raw,width=%i,height=%i" % (self.video_width_, self.video_height_))
+            cf_vin.set_property("caps", caps_vin)
+            self.pipeline_.add(cf_vin)
+
+            q_vscaled = Gst.ElementFactory.make("queue")
+            self.pipeline_.add(q_vscaled)
+            conv_vscaled = Gst.ElementFactory.make("videoconvert")
+            self.pipeline_.add(conv_vscaled)
             self.overlay_ = Gst.ElementFactory.make("rsvgoverlay")
             self.overlay_.set_property("data", self.getVumeterSVG(0, 0, 0, 0))
             self.pipeline_.add(self.overlay_)
             conv_vout = Gst.ElementFactory.make("videoconvert")
+
             self.pipeline_.add(conv_vout)
             vsink = Gst.ElementFactory.make("xvimagesink")
             self.pipeline_.add(vsink)
 
+
             q_vin.link(conv_vin)
-            conv_vin.link(veffect)
-            veffect.link(conv_vin2)
-            conv_vin2.link(self.overlay_)
+            conv_vin.link(scale_vin)
+            scale_vin.link(cf_vin)
+            cf_vin.link(q_vscaled)
+            q_vscaled.link(conv_vscaled)
+            conv_vscaled.link(self.overlay_)
             self.overlay_.link(conv_vout)
             conv_vout.link(vsink)
+
 
 
             q_ain = Gst.ElementFactory.make("queue")
