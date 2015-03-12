@@ -25,6 +25,7 @@
 
 import sys
 import getopt
+from enum import Enum
 
 import gi
 gi.require_version('Gst', '1.0')
@@ -35,8 +36,14 @@ from gi.repository import Gtk
 from gi.repository import Gst
 from gi.repository import GstVideo
 
+class State(Enum):
+    idle = 1
+    started = 2
+    running = 3
+    finished = 4
 
 class R3Ari():
+
     def __init__(self, width=1280, height=720):
         GObject.threads_init()
         Gdk.init([])
@@ -46,6 +53,7 @@ class R3Ari():
         self.win_ = None
         self.pipeline_ = None
         self.watch_id_ = None
+        self.gaudi_id_ = None
 
         self.video_width_ = width
         self.video_height_ = height
@@ -60,6 +68,8 @@ class R3Ari():
         self.lvl_th_ = 0.3
         self.lvl_pkttl_ = 300000000
         self.lvl_pkfalloff_ = 15
+
+        self.state_ = State.idle
 
 
     def info(self, message, arg=None):
@@ -95,6 +105,11 @@ class R3Ari():
 #                sys.stdout.flush()
                 self.updateMeter(self.lvl_conv(l), self.lvl_conv(lp), self.lvl_conv(r), self.lvl_conv(rp))
 
+                if self.state_ == State.running:
+                    max = self.lvl_conv(lp if lp > rp else rp)
+                    if max < self.lvl_th_:
+                        self.stueh_und_staad()
+
         return True
 
     def on_keypress(self, win, event):
@@ -104,15 +119,76 @@ class R3Ari():
             else:
                 self.win_.unfullscreen()
         elif event.keyval == Gdk.KEY_space:
-            self.info("starting...")
-            self.msg_overlay_.set_property("data", self.getMessageSVG("Applaus!"))
+            self.start_die_gaudi()
 
         elif event.keyval == Gdk.KEY_R:
-            self.info("resetting...")
-            self.msg_overlay_.set_property("data", "")
+            self.vagess_mas()
 
     def on_window_state_change(self, win, event):
         self.win_is_fullscreen_ = bool(Gdk.WindowState.FULLSCREEN & event.new_window_state)
+
+
+
+    def start_die_gaudi(self):
+        if not self.state_ == State.idle:
+            return
+
+        self.info("starting...")
+        self.state_ = State.started
+        self.msg_overlay_.set_property("data", self.getMessageSVG("Applaus!"))
+
+        clock = self.pipeline_.get_clock()
+        now = clock.get_time()
+        self.gaudi_id_ = clock.new_periodic_id(now, 40*Gst.MSECOND)
+        clock.id_wait_async(self.gaudi_id_, self.die_gaudi, now)
+
+    def los_lei_lafen(self):
+        if not self.state_ == State.started:
+            return
+
+        self.info("running...")
+        self.state_ = State.running
+        self.msg_overlay_.set_property("data", "")
+
+    def stueh_und_staad(self):
+        if not self.state_ == State.running:
+            return
+
+        self.info("finished...")
+        self.state_ = State.finished
+        if self.gaudi_id_:
+            clock = self.pipeline_.get_clock()
+            clock.id_unschedule(self.gaudi_id_)
+#            clock.id_unref(self.gaudi_id_)
+            self.gaudi_id_ = None
+
+        self.msg_overlay_.set_property("data", self.getMessageSVG("FIN"))
+
+    def vagess_mas(self):
+        self.info("idle...")
+        self.state_ = State.idle
+        if self.gaudi_id_:
+            clock = self.pipeline_.get_clock()
+            clock.id_unschedule(self.gaudi_id_)
+#            clock.id_unref(self.gaudi_id_)
+            self.gaudi_id_ = None
+
+        self.msg_overlay_.set_property("data", "")
+
+
+    def die_gaudi(self, clock, now, start, _):
+        if self.state_ == State.started:
+            msecs = (now-start)/Gst.MSECOND
+            if msecs > 4000:
+                self.los_lei_lafen()
+                return False
+            elif msecs > 2000:
+                o = 1.0 - (msecs - 2000)/2000.0
+                self.msg_overlay_.set_property("data", self.getMessageSVG("Applaus!", o))
+                return True
+
+        return False
+
 
     def create_video_pipeline(self):
         q_vin = Gst.ElementFactory.make("queue")
@@ -260,7 +336,7 @@ class R3Ari():
         return x/90.0
 
 
-    def getMessageSVG(self, msg):
+    def getMessageSVG(self, msg, opacity=1.0):
         svg = "<svg>\n"
 
         box_w = self.msg_width_
@@ -271,10 +347,10 @@ class R3Ari():
         text_x = box_x + self.msg_width_/2
         text_y = box_y + self.msg_spacing_ + text_size
 
-        svg += "  <rect x='%i' y='%i' rx='%i' ry='%i' width='%i' height='%i' style='fill:black;opacity:0.5' />\n" %(
-            box_x, box_y, 0.5*self.msg_spacing_, 0.5*self.msg_spacing_, box_w, box_h)
+        svg += "  <rect x='%i' y='%i' rx='%i' ry='%i' width='%i' height='%i' style='fill:black;opacity:%f' />\n" %(
+            box_x, box_y, 0.5*self.msg_spacing_, 0.5*self.msg_spacing_, box_w, box_h, 0.5*opacity)
         svg += "  <text text-anchor='middle' dy='-0.25em' x='%i' y='%i' fill='white' " %(text_x, text_y)
-        svg += "style='font-size: %i; font-family: Ubuntu; font-weight: bold'" %(text_size)
+        svg += "style='font-size: %i; font-family: Ubuntu; font-weight: bold; fill-opacity: %f'" %(text_size, opacity)
         svg += ">%s</text>\n" % (msg)
 
         svg += "</svg>\n"
@@ -288,7 +364,7 @@ class R3Ari():
         svg = "<svg>\n"
         svg += "  <defs>\n"
         svg += "    <linearGradient id='vumeter' x1='0%' y1='0%' x2='100%' y2='0%'>\n"
-        if max > self.lvl_th_:
+        if max > self.lvl_th_ and not self.state_ == State.finished:
             svg += "      <stop offset='0%' style='stop-color:rgb(0,255,0);stop-opacity:1' />\n"
             svg += "      <stop offset='100%' style='stop-color:rgb(255,0,0);stop-opacity:1' />\n"
         else:
