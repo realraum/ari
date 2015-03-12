@@ -28,15 +28,25 @@ import getopt
 
 import gi
 gi.require_version('Gst', '1.0')
-from gi.repository import Gst, GObject
+from gi.repository import GObject
+from gi.repository import Gdk
+from gi.repository import GdkX11
+from gi.repository import Gtk
+from gi.repository import Gst
+from gi.repository import GstVideo
 
 
 class R3Ari():
     def __init__(self, width=1280, height=720):
         GObject.threads_init()
-        Gst.init(None)
-        GObject.set_prgname("r3 audience response indicator")
-        self.mainloop_ = GObject.MainLoop()
+        Gdk.init([])
+        Gtk.init([])
+        Gst.init([])
+
+        self.win_ = Gtk.Window()
+        self.win_.set_title("r3 audience response indicator")
+        self.win_.connect("delete_event", lambda w,e: Gtk.main_quit())
+
         self.pipeline_ = None
         self.watch_id_ = None
 
@@ -68,14 +78,14 @@ class R3Ari():
         t = message.type
         if t == Gst.MessageType.EOS:
             self.info("got EOS - closing application")
-            self.mainloop_.quit()
+            Gtk.main_quit()
         elif t == Gst.MessageType.INFO:
             self.info(message.parse_info())
         elif t == Gst.MessageType.WARNING:
             self.warn(message.parse_warning())
         elif t == Gst.MessageType.ERROR:
             self.error(message.parse_error())
-            self.mainloop_.quit()
+            Gtk.main_quit()
         elif t == Gst.MessageType.ELEMENT:
             s = message.get_structure()
             if s.get_name() == 'level':
@@ -117,8 +127,8 @@ class R3Ari():
 
         conv_vout = Gst.ElementFactory.make("videoconvert")
         self.pipeline_.add(conv_vout)
-        vsink = Gst.ElementFactory.make("xvimagesink")
-        self.pipeline_.add(vsink)
+        self.vsink_ = Gst.ElementFactory.make("xvimagesink")
+        self.pipeline_.add(self.vsink_)
 
 
         q_vin.link(conv_vin)
@@ -129,7 +139,7 @@ class R3Ari():
         conv_vscaled.link(self.vu_overlay_)
         self.vu_overlay_.link(self.msg_overlay_)
         self.msg_overlay_.link(conv_vout)
-        conv_vout.link(vsink)
+        conv_vout.link(self.vsink_)
 
         return q_vin.get_static_pad("sink")
 
@@ -149,36 +159,50 @@ class R3Ari():
         asink = Gst.ElementFactory.make("fakesink")
         self.pipeline_.add(asink)
 
-
         q_ain.link(conv_ain)
         conv_ain.link(level)
         level.link(asink)
 
         return q_ain.get_static_pad("sink")
 
+    def create_pipeline(self):
+        self.pipeline_ = Gst.Pipeline.new()
+
+        source = "tcpclientsrc host=localhost port=1234 ! queue ! gdpdepay"
+        source_bin = Gst.parse_bin_from_description(source, "source")
+        self.pipeline_.add(source_bin)
+        decoder = Gst.ElementFactory.make("decodebin")
+        self.pipeline_.add(decoder)
+
+        vin_pad = self.create_video_pipeline()
+        ain_pad = self.create_audio_pipeline()
+
+        source_bin.link(decoder)
+        sink_pads = {"video": vin_pad, "audio": ain_pad}
+        decoder.connect("pad-added", self.decoder_callback, sink_pads)
+
+        self.pipeline_.get_bus().add_signal_watch()
+        self.watch_id_ = self.pipeline_.get_bus().connect('message', self.on_message)
+
 
     def run(self):
         try:
-            self.pipeline_ = Gst.Pipeline.new()
+            self.create_pipeline()
 
-            source = "tcpclientsrc host=localhost port=1234 ! queue ! gdpdepay"
-            source_bin = Gst.parse_bin_from_description(source, "source")
-            self.pipeline_.add(source_bin)
-            decoder = Gst.ElementFactory.make("decodebin")
-            self.pipeline_.add(decoder)
+            canvas = Gtk.DrawingArea()
+            canvas.set_size_request(self.video_width_, self.video_height_)
+            self.win_.add(canvas)
 
-            vin_pad = self.create_video_pipeline()
-            ain_pad = self.create_audio_pipeline()
+            self.win_.show_all()
 
-            source_bin.link(decoder)
-            sink_pads = {"video": vin_pad, "audio": ain_pad}
-            decoder.connect("pad-added", self.decoder_callback, sink_pads)
+            self.vsink_.set_property("force-aspect-ratio", True)
+            xid = canvas.get_window().get_xid()
+            self.vsink_.set_window_handle(xid)
 
-            self.pipeline_.get_bus().add_signal_watch()
-            self.watch_id_ = self.pipeline_.get_bus().connect('message', self.on_message)
             self.pipeline_.set_state(Gst.State.PLAYING)
 
-            self.mainloop_.run()
+            Gtk.main()
+
 
         except GObject.GError, e:
             self.error('Could not create pipeline', e.message)
@@ -283,5 +307,5 @@ class R3Ari():
 
 
 if __name__ == '__main__':
-    a = R3Ari()
+    a = R3Ari(width=1024, height=576)
     a.run()
