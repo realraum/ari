@@ -55,6 +55,7 @@ class R3Ari():
         self.meter_width_ = 1200
         self.meter_height_ = 23
         self.meter_spacing_ =  12
+        self.threshold_ = 0.3
 
     def info(self, message, arg=None):
         print "INFO: %s (%s)" % (message, arg)
@@ -106,6 +107,10 @@ class R3Ari():
             self.pipeline_.add(q_vin)
             conv_vin = Gst.ElementFactory.make("videoconvert")
             self.pipeline_.add(conv_vin)
+            veffect = Gst.ElementFactory.make("identity")
+            self.pipeline_.add(veffect)
+            conv_vin2 = Gst.ElementFactory.make("videoconvert")
+            self.pipeline_.add(conv_vin2)
             self.overlay_ = Gst.ElementFactory.make("rsvgoverlay")
             self.overlay_.set_property("data", self.getVumeterSVG(0, 0, 0, 0))
             self.pipeline_.add(self.overlay_)
@@ -115,7 +120,9 @@ class R3Ari():
             self.pipeline_.add(vsink)
 
             q_vin.link(conv_vin)
-            conv_vin.link(self.overlay_)
+            conv_vin.link(veffect)
+            veffect.link(conv_vin2)
+            conv_vin2.link(self.overlay_)
             self.overlay_.link(conv_vout)
             conv_vout.link(vsink)
 
@@ -168,11 +175,17 @@ class R3Ari():
 
 
     def getVumeterSVG(self, l, lp, r, rp):
+        avg = (lp + rp) / 2
+
         svg = "<svg>\n"
         svg += "  <defs>\n"
         svg += "    <linearGradient id='vumeter' x1='0%' y1='0%' x2='100%' y2='0%'>\n"
-        svg += "      <stop offset='0%' style='stop-color:rgb(0,255,0);stop-opacity:1' />\n"
-        svg += "      <stop offset='100%' style='stop-color:rgb(255,0,0);stop-opacity:1' />\n"
+        if avg > self.threshold_:
+            svg += "      <stop offset='0%' style='stop-color:rgb(0,255,0);stop-opacity:1' />\n"
+            svg += "      <stop offset='100%' style='stop-color:rgb(255,0,0);stop-opacity:1' />\n"
+        else:
+            svg += "      <stop offset='0%' style='stop-color:rgb(42,42,42);stop-opacity:1' />\n"
+            svg += "      <stop offset='100%' style='stop-color:rgb(200,200,200);stop-opacity:1' />\n"
         svg += "    </linearGradient>\n"
         svg += "  </defs>\n"
 
@@ -183,17 +196,20 @@ class R3Ari():
 
         svg += "  <rect x='%i' y='%i' rx='%i' ry='%i' width='%i' height='%i' style='fill:black;opacity:0.3' />\n" %(
             box_x, box_y, self.meter_spacing_, self.meter_spacing_, box_w, box_h)
+        svg += "  <line x1='%i' y1='%i' x2='%i' y2='%i' style='stroke:white;stroke-width:3' />\n" %(
+            box_x + self.meter_width_*self.threshold_, box_y + 0.5*self.meter_spacing_,
+            box_x + self.meter_width_*self.threshold_, box_y + 2.5*self.meter_spacing_ + 2*self.meter_height_)
 
         svg += "  <rect x='%i' y='%i' width='%i' height='%i' style='fill:url(#vumeter);opacity:0.9' />\n" %(
             box_x + self.meter_spacing_, box_y + self.meter_spacing_, self.meter_width_*l, self.meter_height_)
-        svg += "  <line x1='%i' y1='%i' x2='%i' y2='%i' style='stroke:rgb(255,0,0);stroke-width:3' />\n" %(
-            box_x + self.meter_width_*lp, box_y + self.meter_spacing_, box_x + self.meter_width_*lp, box_y + self.meter_spacing_ + self.meter_height_)
+        svg += "  <line x1='%i' y1='%i' x2='%i' y2='%i' style='stroke:rgb(255,0,0);stroke-width:5' />\n" %(
+            box_x + self.meter_width_*lp, box_y + 0.75*self.meter_spacing_, box_x + self.meter_width_*lp, box_y + 1.25*self.meter_spacing_ + self.meter_height_)
 
         svg += "  <rect x='%i' y='%i' width='%i' height='%i' style='fill:url(#vumeter);opacity:0.9' />\n" %(
             box_x + self.meter_spacing_, box_y + self.meter_height_ + 2*self.meter_spacing_, self.meter_width_*r, self.meter_height_)
-        svg += "  <line x1='%i' y1='%i' x2='%i' y2='%i' style='stroke:rgb(255,0,0);stroke-width:3' />\n" %(
-            box_x + self.meter_width_*rp, box_y + self.meter_height_ + 2*self.meter_spacing_,
-            box_x + self.meter_width_*rp, box_y + 2*self.meter_spacing_ + 2*self.meter_height_)
+        svg += "  <line x1='%i' y1='%i' x2='%i' y2='%i' style='stroke:rgb(255,0,0);stroke-width:5' />\n" %(
+            box_x + self.meter_width_*rp, box_y + self.meter_height_ + 1.75*self.meter_spacing_,
+            box_x + self.meter_width_*rp, box_y + 2*self.meter_height_ + 2.25*self.meter_spacing_)
 
         svg += "</svg>\n"
 
