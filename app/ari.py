@@ -46,6 +46,9 @@ class R3Ari():
         self.win_ = Gtk.Window()
         self.win_.set_title("r3 audience response indicator")
         self.win_.connect("delete_event", lambda w,e: Gtk.main_quit())
+        self.win_.connect("key-press-event", self.on_keypress)
+        self.win_.connect("window-state-event", self.on_window_state_change)
+        self.win_is_fullscreen_ = False
 
         self.pipeline_ = None
         self.watch_id_ = None
@@ -99,6 +102,16 @@ class R3Ari():
                 self.updateMeter(self.lvl_conv(l), self.lvl_conv(lp), self.lvl_conv(r), self.lvl_conv(rp))
 
         return True
+
+    def on_keypress(self, win, event):
+        if event.keyval == Gdk.KEY_F11:
+            if not self.win_is_fullscreen_:
+                self.win_.fullscreen()
+            else:
+                self.win_.unfullscreen()
+
+    def on_window_state_change(self, win, event):
+        self.win_is_fullscreen_ = bool(Gdk.WindowState.FULLSCREEN & event.new_window_state)
 
     def create_video_pipeline(self):
         q_vin = Gst.ElementFactory.make("queue")
