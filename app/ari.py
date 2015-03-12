@@ -42,9 +42,13 @@ class R3Ari():
 
         self.video_width_ = width
         self.video_height_ = height
-        self.meter_width_ = 0.75*self.video_width_
-        self.meter_height_ = 0.03*self.video_height_
-        self.meter_spacing_ =  0.4*self.meter_height_
+        self.vu_width_ = 0.75*self.video_width_
+        self.vu_height_ = 0.03*self.video_height_
+        self.vu_spacing_ =  0.4*self.vu_height_
+
+        self.msg_spacing_ = 0.05*self.video_height_
+        self.msg_width_ = 0.7*self.video_width_
+        self.msg_height_ = 0.3*self.video_height_
 
         self.lvl_th_ = 0.3
         self.lvl_pkttl_ = 300000000
@@ -104,9 +108,12 @@ class R3Ari():
         conv_vscaled = Gst.ElementFactory.make("videoconvert")
         self.pipeline_.add(conv_vscaled)
 
-        self.overlay_ = Gst.ElementFactory.make("rsvgoverlay")
-        self.overlay_.set_property("data", self.getVumeterSVG(0, 0, 0, 0))
-        self.pipeline_.add(self.overlay_)
+        self.vu_overlay_ = Gst.ElementFactory.make("rsvgoverlay")
+        self.vu_overlay_.set_property("data", self.getVumeterSVG(0, 0, 0, 0))
+        self.pipeline_.add(self.vu_overlay_)
+        self.msg_overlay_ = Gst.ElementFactory.make("rsvgoverlay")
+        self.msg_overlay_.set_property("data", self.getMessageSVG())
+        self.pipeline_.add(self.msg_overlay_)
 
         conv_vout = Gst.ElementFactory.make("videoconvert")
         self.pipeline_.add(conv_vout)
@@ -119,8 +126,9 @@ class R3Ari():
         scale_vin.link(cf_vin)
         cf_vin.link(q_vscaled)
         q_vscaled.link(conv_vscaled)
-        conv_vscaled.link(self.overlay_)
-        self.overlay_.link(conv_vout)
+        conv_vscaled.link(self.vu_overlay_)
+        self.vu_overlay_.link(self.msg_overlay_)
+        self.msg_overlay_.link(conv_vout)
         conv_vout.link(vsink)
 
         return q_vin.get_static_pad("sink")
@@ -204,6 +212,28 @@ class R3Ari():
         return x/90.0
 
 
+    def getMessageSVG(self):
+        svg = "<svg>\n"
+
+        box_w = self.msg_width_
+        box_h = self.msg_height_
+        box_x = (self.video_width_ - box_w)/2
+        box_y = (self.video_height_ - box_h)/2
+        text_size = self.msg_height_ - 2*self.msg_spacing_
+        text_x = box_x + self.msg_width_/2
+        text_y = box_y + self.msg_spacing_ + text_size
+
+        svg += "  <rect x='%i' y='%i' rx='%i' ry='%i' width='%i' height='%i' style='fill:black;opacity:0.5' />\n" %(
+            box_x, box_y, 0.5*self.msg_spacing_, 0.5*self.msg_spacing_, box_w, box_h)
+        svg += "  <text text-anchor='middle' dy='-0.25em' x='%i' y='%i' fill='white' " %(text_x, text_y)
+        svg += "style='font-size: %i; font-family: Ubuntu; font-weight: bold'" %(text_size)
+        svg += ">%s</text>\n" % ("Applaus!")
+
+        svg += "</svg>\n"
+
+        return svg
+
+
     def getVumeterSVG(self, l, lp, r, rp):
         max = lp if lp > rp else rp
 
@@ -219,35 +249,35 @@ class R3Ari():
         svg += "    </linearGradient>\n"
         svg += "  </defs>\n"
 
-        box_w = self.meter_width_ + 2*self.meter_spacing_
-        box_h = 2*self.meter_height_ + 3*self.meter_spacing_
+        box_w = self.vu_width_ + 2*self.vu_spacing_
+        box_h = 2*self.vu_height_ + 3*self.vu_spacing_
         box_x = (self.video_width_ - box_w)/2
-        box_y = self.meter_spacing_
+        box_y = 2*self.vu_spacing_
 
         svg += "  <rect x='%i' y='%i' rx='%i' ry='%i' width='%i' height='%i' style='fill:black;opacity:0.5' />\n" %(
-            box_x, box_y, self.meter_spacing_, self.meter_spacing_, box_w, box_h)
+            box_x, box_y, self.vu_spacing_, self.vu_spacing_, box_w, box_h)
         svg += "  <line x1='%i' y1='%i' x2='%i' y2='%i' style='stroke:white;stroke-width:%i' />\n" %(
-            box_x + self.meter_width_*self.lvl_th_, box_y + 0.5*self.meter_spacing_,
-            box_x + self.meter_width_*self.lvl_th_, box_y + 2.5*self.meter_spacing_ + 2*self.meter_height_, 0.5*self.meter_spacing_)
+            box_x + self.vu_width_*self.lvl_th_, box_y + 0.5*self.vu_spacing_,
+            box_x + self.vu_width_*self.lvl_th_, box_y + 2.5*self.vu_spacing_ + 2*self.vu_height_, 0.5*self.vu_spacing_)
 
         svg += "  <rect x='%i' y='%i' width='%i' height='%i' style='fill:url(#vumeter);opacity:0.9' />\n" %(
-            box_x + self.meter_spacing_, box_y + self.meter_spacing_, self.meter_width_*l, self.meter_height_)
+            box_x + self.vu_spacing_, box_y + self.vu_spacing_, self.vu_width_*l, self.vu_height_)
         svg += "  <line x1='%i' y1='%i' x2='%i' y2='%i' style='stroke:rgb(255,0,0);stroke-width:%i' />\n" %(
-            box_x + self.meter_width_*lp, box_y + 0.75*self.meter_spacing_,
-            box_x + self.meter_width_*lp, box_y + 1.25*self.meter_spacing_ + self.meter_height_, self.meter_spacing_)
+            box_x + self.vu_width_*lp, box_y + 0.75*self.vu_spacing_,
+            box_x + self.vu_width_*lp, box_y + 1.25*self.vu_spacing_ + self.vu_height_, self.vu_spacing_)
 
         svg += "  <rect x='%i' y='%i' width='%i' height='%i' style='fill:url(#vumeter);opacity:0.9' />\n" %(
-            box_x + self.meter_spacing_, box_y + self.meter_height_ + 2*self.meter_spacing_, self.meter_width_*r, self.meter_height_)
+            box_x + self.vu_spacing_, box_y + self.vu_height_ + 2*self.vu_spacing_, self.vu_width_*r, self.vu_height_)
         svg += "  <line x1='%i' y1='%i' x2='%i' y2='%i' style='stroke:rgb(255,0,0);stroke-width:%i' />\n" %(
-            box_x + self.meter_width_*rp, box_y + self.meter_height_ + 1.75*self.meter_spacing_,
-            box_x + self.meter_width_*rp, box_y + 2*self.meter_height_ + 2.25*self.meter_spacing_, self.meter_spacing_)
+            box_x + self.vu_width_*rp, box_y + self.vu_height_ + 1.75*self.vu_spacing_,
+            box_x + self.vu_width_*rp, box_y + 2*self.vu_height_ + 2.25*self.vu_spacing_, self.vu_spacing_)
 
         svg += "</svg>\n"
 
         return svg
 
     def updateMeter(self, l, lp, r, rp):
-        self.overlay_.set_property("data", self.getVumeterSVG(l, lp, r, rp))
+        self.vu_overlay_.set_property("data", self.getVumeterSVG(l, lp, r, rp))
         return True
 
 
