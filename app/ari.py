@@ -215,20 +215,21 @@ class R3Ari():
 
         svg += "  <rect x='%i' y='%i' rx='%i' ry='%i' width='%i' height='%i' style='fill:black;opacity:0.3' />\n" %(
             box_x, box_y, self.meter_spacing_, self.meter_spacing_, box_w, box_h)
-        svg += "  <line x1='%i' y1='%i' x2='%i' y2='%i' style='stroke:white;stroke-width:3' />\n" %(
+        svg += "  <line x1='%i' y1='%i' x2='%i' y2='%i' style='stroke:white;stroke-width:%i' />\n" %(
             box_x + self.meter_width_*self.lvl_th_, box_y + 0.5*self.meter_spacing_,
-            box_x + self.meter_width_*self.lvl_th_, box_y + 2.5*self.meter_spacing_ + 2*self.meter_height_)
+            box_x + self.meter_width_*self.lvl_th_, box_y + 2.5*self.meter_spacing_ + 2*self.meter_height_, 0.5*self.meter_spacing_)
 
         svg += "  <rect x='%i' y='%i' width='%i' height='%i' style='fill:url(#vumeter);opacity:0.9' />\n" %(
             box_x + self.meter_spacing_, box_y + self.meter_spacing_, self.meter_width_*l, self.meter_height_)
-        svg += "  <line x1='%i' y1='%i' x2='%i' y2='%i' style='stroke:rgb(255,0,0);stroke-width:5' />\n" %(
-            box_x + self.meter_width_*lp, box_y + 0.75*self.meter_spacing_, box_x + self.meter_width_*lp, box_y + 1.25*self.meter_spacing_ + self.meter_height_)
+        svg += "  <line x1='%i' y1='%i' x2='%i' y2='%i' style='stroke:rgb(255,0,0);stroke-width:%i' />\n" %(
+            box_x + self.meter_width_*lp, box_y + 0.75*self.meter_spacing_,
+            box_x + self.meter_width_*lp, box_y + 1.25*self.meter_spacing_ + self.meter_height_, self.meter_spacing_)
 
         svg += "  <rect x='%i' y='%i' width='%i' height='%i' style='fill:url(#vumeter);opacity:0.9' />\n" %(
             box_x + self.meter_spacing_, box_y + self.meter_height_ + 2*self.meter_spacing_, self.meter_width_*r, self.meter_height_)
-        svg += "  <line x1='%i' y1='%i' x2='%i' y2='%i' style='stroke:rgb(255,0,0);stroke-width:5' />\n" %(
+        svg += "  <line x1='%i' y1='%i' x2='%i' y2='%i' style='stroke:rgb(255,0,0);stroke-width:%i' />\n" %(
             box_x + self.meter_width_*rp, box_y + self.meter_height_ + 1.75*self.meter_spacing_,
-            box_x + self.meter_width_*rp, box_y + 2*self.meter_height_ + 2.25*self.meter_spacing_)
+            box_x + self.meter_width_*rp, box_y + 2*self.meter_height_ + 2.25*self.meter_spacing_, self.meter_spacing_)
 
         svg += "</svg>\n"
 
