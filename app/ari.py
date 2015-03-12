@@ -224,7 +224,7 @@ class R3Ari():
         box_x = (self.video_width_ - box_w)/2
         box_y = self.meter_spacing_
 
-        svg += "  <rect x='%i' y='%i' rx='%i' ry='%i' width='%i' height='%i' style='fill:black;opacity:0.3' />\n" %(
+        svg += "  <rect x='%i' y='%i' rx='%i' ry='%i' width='%i' height='%i' style='fill:black;opacity:0.5' />\n" %(
             box_x, box_y, self.meter_spacing_, self.meter_spacing_, box_w, box_h)
         svg += "  <line x1='%i' y1='%i' x2='%i' y2='%i' style='stroke:white;stroke-width:%i' />\n" %(
             box_x + self.meter_width_*self.lvl_th_, box_y + 0.5*self.meter_spacing_,
