@@ -27,7 +27,7 @@ GST_LAUNCH=gst-launch-1.0
 PORT=1234
 
 $GST_LAUNCH decklinksrc name=src device-number=0 mode=10 connection=0 audio-input=0  \
-               src.videosrc ! queue ! jpegenc ! mux.                                 \
+               src.videosrc ! queue ! videoconvert ! avdeinterlace ! jpegenc ! mux.  \
                src.audiosrc ! queue ! mux.                                           \
                matroskamux name=mux streamable=yes ! tee name=vt                     \
                vt. ! queue ! gdppay ! tcpserversink port=$PORT

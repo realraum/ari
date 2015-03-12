@@ -188,12 +188,12 @@ class R3Ari():
 
 
     def getVumeterSVG(self, l, lp, r, rp):
-        avg = (lp + rp) / 2
+        max = lp if lp > rp else rp
 
         svg = "<svg>\n"
         svg += "  <defs>\n"
         svg += "    <linearGradient id='vumeter' x1='0%' y1='0%' x2='100%' y2='0%'>\n"
-        if avg > self.threshold_:
+        if max > self.threshold_:
             svg += "      <stop offset='0%' style='stop-color:rgb(0,255,0);stop-opacity:1' />\n"
             svg += "      <stop offset='100%' style='stop-color:rgb(255,0,0);stop-opacity:1' />\n"
         else:
