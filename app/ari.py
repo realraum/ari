@@ -55,7 +55,11 @@ class R3Ari():
         self.meter_width_ = 0.75*self.video_width_
         self.meter_height_ = 0.03*self.video_height_
         self.meter_spacing_ =  0.4*self.meter_height_
-        self.threshold_ = 0.3
+
+        self.lvl_th_ = 0.3
+        self.lvl_pkttl_ = 300000000
+        self.lvl_pkfalloff_ = 15
+
 
     def info(self, message, arg=None):
         print "INFO: %s (%s)" % (message, arg)
@@ -146,6 +150,8 @@ class R3Ari():
             self.pipeline_.add(conv_ain)
             level = Gst.ElementFactory.make("level", "level")
             level.set_property("message", True)
+            level.set_property("peak-ttl", self.lvl_pkttl_)
+            level.set_property("peak-falloff", self.lvl_pkfalloff_)
             self.pipeline_.add(level)
             asink = Gst.ElementFactory.make("fakesink")
             self.pipeline_.add(asink)
@@ -193,7 +199,7 @@ class R3Ari():
         svg = "<svg>\n"
         svg += "  <defs>\n"
         svg += "    <linearGradient id='vumeter' x1='0%' y1='0%' x2='100%' y2='0%'>\n"
-        if max > self.threshold_:
+        if max > self.lvl_th_:
             svg += "      <stop offset='0%' style='stop-color:rgb(0,255,0);stop-opacity:1' />\n"
             svg += "      <stop offset='100%' style='stop-color:rgb(255,0,0);stop-opacity:1' />\n"
         else:
@@ -210,8 +216,8 @@ class R3Ari():
         svg += "  <rect x='%i' y='%i' rx='%i' ry='%i' width='%i' height='%i' style='fill:black;opacity:0.3' />\n" %(
             box_x, box_y, self.meter_spacing_, self.meter_spacing_, box_w, box_h)
         svg += "  <line x1='%i' y1='%i' x2='%i' y2='%i' style='stroke:white;stroke-width:3' />\n" %(
-            box_x + self.meter_width_*self.threshold_, box_y + 0.5*self.meter_spacing_,
-            box_x + self.meter_width_*self.threshold_, box_y + 2.5*self.meter_spacing_ + 2*self.meter_height_)
+            box_x + self.meter_width_*self.lvl_th_, box_y + 0.5*self.meter_spacing_,
+            box_x + self.meter_width_*self.lvl_th_, box_y + 2.5*self.meter_spacing_ + 2*self.meter_height_)
 
         svg += "  <rect x='%i' y='%i' width='%i' height='%i' style='fill:url(#vumeter);opacity:0.9' />\n" %(
             box_x + self.meter_spacing_, box_y + self.meter_spacing_, self.meter_width_*l, self.meter_height_)
