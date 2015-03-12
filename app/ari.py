@@ -43,13 +43,7 @@ class R3Ari():
         Gtk.init([])
         Gst.init([])
 
-        self.win_ = Gtk.Window()
-        self.win_.set_title("r3 audience response indicator")
-        self.win_.connect("delete_event", lambda w,e: Gtk.main_quit())
-        self.win_.connect("key-press-event", self.on_keypress)
-        self.win_.connect("window-state-event", self.on_window_state_change)
-        self.win_is_fullscreen_ = False
-
+        self.win_ = None
         self.pipeline_ = None
         self.watch_id_ = None
 
@@ -92,13 +86,13 @@ class R3Ari():
         elif t == Gst.MessageType.ELEMENT:
             s = message.get_structure()
             if s.get_name() == 'level':
-                sys.stdout.write("\r")
+#                sys.stdout.write("\r")
                 l = self.lvl_clamp(s['peak'][0])
                 lp = self.lvl_clamp(s['decay'][0])
                 r = self.lvl_clamp(s['peak'][1])
                 rp = self.lvl_clamp(s['decay'][1])
-                sys.stdout.write("left: %3.2f / %3.2f, right: %3.2f / %3.2f  " % (l, lp, r, rp))
-                sys.stdout.flush()
+#                sys.stdout.write("left: %3.2f / %3.2f, right: %3.2f / %3.2f  " % (l, lp, r, rp))
+#                sys.stdout.flush()
                 self.updateMeter(self.lvl_conv(l), self.lvl_conv(lp), self.lvl_conv(r), self.lvl_conv(rp))
 
         return True
@@ -109,6 +103,13 @@ class R3Ari():
                 self.win_.fullscreen()
             else:
                 self.win_.unfullscreen()
+        elif event.keyval == Gdk.KEY_space:
+            self.info("starting...")
+            self.msg_overlay_.set_property("data", self.getMessageSVG("Applaus!"))
+
+        elif event.keyval == Gdk.KEY_R:
+            self.info("resetting...")
+            self.msg_overlay_.set_property("data", "")
 
     def on_window_state_change(self, win, event):
         self.win_is_fullscreen_ = bool(Gdk.WindowState.FULLSCREEN & event.new_window_state)
@@ -135,7 +136,7 @@ class R3Ari():
         self.vu_overlay_.set_property("data", self.getVumeterSVG(0, 0, 0, 0))
         self.pipeline_.add(self.vu_overlay_)
         self.msg_overlay_ = Gst.ElementFactory.make("rsvgoverlay")
-        self.msg_overlay_.set_property("data", self.getMessageSVG())
+        self.msg_overlay_.set_property("data", "")
         self.pipeline_.add(self.msg_overlay_)
 
         conv_vout = Gst.ElementFactory.make("videoconvert")
@@ -198,24 +199,34 @@ class R3Ari():
         self.watch_id_ = self.pipeline_.get_bus().connect('message', self.on_message)
 
 
+    def create_window(self):
+
+        self.win_ = Gtk.Window()
+        self.win_.set_title("r3 audience response indicator")
+        self.win_.connect("delete_event", lambda w,e: Gtk.main_quit())
+        self.win_.connect("key-press-event", self.on_keypress)
+        self.win_.connect("window-state-event", self.on_window_state_change)
+        self.win_is_fullscreen_ = False
+
+        canvas = Gtk.DrawingArea()
+        canvas.set_size_request(self.video_width_, self.video_height_)
+        self.win_.add(canvas)
+
+        self.win_.show_all()
+
+        return canvas.get_window().get_xid()
+
+
     def run(self):
         try:
             self.create_pipeline()
-
-            canvas = Gtk.DrawingArea()
-            canvas.set_size_request(self.video_width_, self.video_height_)
-            self.win_.add(canvas)
-
-            self.win_.show_all()
+            xid = self.create_window()
 
             self.vsink_.set_property("force-aspect-ratio", True)
-            xid = canvas.get_window().get_xid()
             self.vsink_.set_window_handle(xid)
 
             self.pipeline_.set_state(Gst.State.PLAYING)
-
             Gtk.main()
-
 
         except GObject.GError, e:
             self.error('Could not create pipeline', e.message)
@@ -249,7 +260,7 @@ class R3Ari():
         return x/90.0
 
 
-    def getMessageSVG(self):
+    def getMessageSVG(self, msg):
         svg = "<svg>\n"
 
         box_w = self.msg_width_
@@ -264,7 +275,7 @@ class R3Ari():
             box_x, box_y, 0.5*self.msg_spacing_, 0.5*self.msg_spacing_, box_w, box_h)
         svg += "  <text text-anchor='middle' dy='-0.25em' x='%i' y='%i' fill='white' " %(text_x, text_y)
         svg += "style='font-size: %i; font-family: Ubuntu; font-weight: bold'" %(text_size)
-        svg += ">%s</text>\n" % ("Applaus!")
+        svg += ">%s</text>\n" % (msg)
 
         svg += "</svg>\n"
 
@@ -320,5 +331,6 @@ class R3Ari():
 
 
 if __name__ == '__main__':
+#    a = R3Ari()
     a = R3Ari(width=1024, height=576)
     a.run()
