@@ -69,6 +69,10 @@ class R3Ari():
         self.lvl_pkttl_ = 300000000
         self.lvl_pkfalloff_ = 15
 
+        self.serial_device_name_ = '/dev/ttyACM0'
+        self.serial_device_ = None
+        self.serial_write_pending_ = ''
+
         self.state_ = State.idle
 
 
@@ -137,6 +141,8 @@ class R3Ari():
         self.state_ = State.started
         self.msg_overlay_.set_property("data", self.getMessageSVG("Applaus!"))
 
+        self.serial_write('l')
+
         clock = self.pipeline_.get_clock()
         now = clock.get_time()
         self.gaudi_id_ = clock.new_periodic_id(now, 40*Gst.MSECOND)
@@ -156,6 +162,9 @@ class R3Ari():
 
         self.info("finished...")
         self.state_ = State.finished
+
+        self.serial_write('s')
+
         if self.gaudi_id_:
             clock = self.pipeline_.get_clock()
             clock.id_unschedule(self.gaudi_id_)
@@ -167,6 +176,9 @@ class R3Ari():
     def vagess_mas(self):
         self.info("idle...")
         self.state_ = State.idle
+
+        self.serial_write('s')
+
         if self.gaudi_id_:
             clock = self.pipeline_.get_clock()
             clock.id_unschedule(self.gaudi_id_)
@@ -188,6 +200,38 @@ class R3Ari():
                 return True
 
         return False
+
+    def on_serial_data_read(self, fd, cond, dev):
+        data = dev.read(10)
+        return True
+
+    def on_serial_data_write(self, fd, cond, dev):
+        dev.write(self.serial_write_pending_)
+        self.serial_write_pending_ = '' # remove only bytes written from buffer
+        return False
+
+    def serial_write(self, data):
+        l = len(self.serial_write_pending_)
+        self.serial_write_pending_ += data
+        if l == 0 and len(self.serial_write_pending_) > 0:
+            dev = self.serial_device_
+            GObject.io_add_watch(dev.fileno(), GObject.IO_OUT, self.on_serial_data_write, dev)
+
+    def open_serial_device(self):
+        import serial
+
+        self.info("opening '%s'" % (self.serial_device_name_))
+        try:
+            dev = serial.Serial(port=self.serial_device_name_, timeout=0.001)
+            dev.flushInput()
+            dev.flushOutput()
+            GObject.io_add_watch(dev.fileno(), GObject.IO_IN | GObject.IO_PRI, self.on_serial_data_read, dev)
+
+            return dev
+
+        except (ValueError, serial.SerialException), msg:
+            self.error("opening serial device:", msg)
+            return None
 
 
     def create_video_pipeline(self):
@@ -295,6 +339,11 @@ class R3Ari():
 
     def run(self):
         try:
+            self.serial_device_ = self.open_serial_device()
+            if not self.serial_device_:
+                return
+            self.serial_write('s')
+
             self.create_pipeline()
             xid = self.create_window()
 
