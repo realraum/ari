@@ -135,6 +135,20 @@ class R3Ari():
 
 
 
+    def start_timer(self):
+        self.elapsed_ms_ = 0
+        clock = self.pipeline_.get_clock()
+        now = clock.get_time()
+        self.gaudi_id_ = clock.new_periodic_id(now, 40*Gst.MSECOND)
+        clock.id_wait_async(self.gaudi_id_, self.die_gaudi, now)
+
+    def stop_timer(self):
+        if self.gaudi_id_:
+            clock = self.pipeline_.get_clock()
+            clock.id_unschedule(self.gaudi_id_)
+#            clock.id_unref(self.gaudi_id_)
+            self.gaudi_id_ = None
+
     def start_die_gaudi(self):
         if not self.state_ == State.idle:
             return
@@ -144,11 +158,7 @@ class R3Ari():
         self.updateMessage("Applaus!")
 
         self.serial_write('l')
-
-        clock = self.pipeline_.get_clock()
-        now = clock.get_time()
-        self.gaudi_id_ = clock.new_periodic_id(now, 40*Gst.MSECOND)
-        clock.id_wait_async(self.gaudi_id_, self.die_gaudi, now)
+        self.start_timer()
 
     def los_lei_lafen(self):
         if not self.state_ == State.started:
@@ -156,7 +166,7 @@ class R3Ari():
 
         self.info("running...")
         self.state_ = State.running
-        self.msg_overlay_.set_property("data", "")
+        self.updateMessage(None)
 
     def stueh_und_staad(self):
         if not self.state_ == State.running:
@@ -166,38 +176,26 @@ class R3Ari():
         self.state_ = State.finished
 
         self.serial_write('s')
-
-        if self.gaudi_id_:
-            clock = self.pipeline_.get_clock()
-            clock.id_unschedule(self.gaudi_id_)
-#            clock.id_unref(self.gaudi_id_)
-            self.gaudi_id_ = None
-
-        self.updateMessage("FIN")
+        self.stop_timer()
+        self.updateMessage(self.elapsed_ms_)
 
     def vagess_mas(self):
         self.info("idle...")
         self.state_ = State.idle
 
         self.serial_write('s')
-
-        if self.gaudi_id_:
-            clock = self.pipeline_.get_clock()
-            clock.id_unschedule(self.gaudi_id_)
-#            clock.id_unref(self.gaudi_id_)
-            self.gaudi_id_ = None
-
-        self.msg_overlay_.set_property("data", "")
+        self.stop_timer()
+        self.updateMessage(None)
 
 
     def die_gaudi(self, clock, now, start, _):
-        if self.state_ == State.started:
-            msecs = (now-start)/Gst.MSECOND
-            if msecs > 4000:
+        if self.state_ == State.started or self.state_ == State.running:
+            self.elapsed_ms_ = (now-start)/Gst.MSECOND
+            if self.elapsed_ms_ > 4000:
                 self.los_lei_lafen()
-                return False
-            elif msecs > 2000:
-                o = 1.0 - (msecs - 2000)/2000.0
+                return True
+            elif self.elapsed_ms_ > 2000:
+                o = 1.0 - (self.elapsed_ms_ - 2000)/2000.0
                 self.updateMessage("Applaus!", o)
                 return True
 
@@ -258,7 +256,7 @@ class R3Ari():
         self.updateMeter(0, 0, 0, 0)
         self.pipeline_.add(self.vu_overlay_)
         self.msg_overlay_ = Gst.ElementFactory.make("rsvgoverlay")
-        self.msg_overlay_.set_property("data", "")
+        self.updateMessage(None)
         self.pipeline_.add(self.msg_overlay_)
 
         conv_vout = Gst.ElementFactory.make("videoconvert")
@@ -411,7 +409,10 @@ class R3Ari():
         return svg
 
     def updateMessage(self, msg, opacity=1.0):
-        self.msg_overlay_.set_property("data", self.getMessageSVG(msg, opacity))
+        if not msg:
+            self.msg_overlay_.set_property("data", "")
+        else:
+            self.msg_overlay_.set_property("data", self.getMessageSVG(msg, opacity))
         return True
 
     def getVumeterSVG(self, l, lp, r, rp):
