@@ -159,7 +159,7 @@ class R3Ari():
 
         self.state_ = State.started
         self.updateMessage("Applaus!")
-        self.serial_write('l')
+        self.serial_write('+')
         self.start_timer()
 
     def los_lei_lafen(self):

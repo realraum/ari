@@ -90,12 +90,12 @@ void pump_start(pump_dir_t dir)
 {
   switch(dir)
   {
-  case left: {
+  case in: {
     PUMP_PORT &= ~(1<<PUMP_OUTPUT_B2_BIT);
     PUMP_PORT |= (1<<PUMP_OUTPUT_B1_BIT |  1<<PUMP_ENABLE_B_BIT);
     break;
   }
-  case right: {
+  case out: {
     PUMP_PORT &= ~(1<<PUMP_OUTPUT_B1_BIT);
     PUMP_PORT |= (1<<PUMP_OUTPUT_B2_BIT |  1<<PUMP_ENABLE_B_BIT);
     break;

@@ -37,8 +37,8 @@
 void handle_cmd(uint8_t cmd)
 {
   switch(cmd) {
-  case 'l': pump_start(left); break;
-  case 'r': pump_start(right); break;
+  case '+': pump_start(in); break;
+  case '-': pump_start(out); break;
   case 's': pump_stop(); break;
   case '!': reset2bootloader(); break;
   default: printf("error\r\n"); return;

@@ -24,7 +24,7 @@
 #ifndef R3ARI_pump_h_INCLUDED
 #define R3ARI_pump_h_INCLUDED
 
-typedef enum { left, right } pump_dir_t;
+typedef enum { in, out } pump_dir_t;
 
 void pump_init(void);
 void pump_start(pump_dir_t dir);
