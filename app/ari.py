@@ -139,7 +139,7 @@ class R3Ari():
         self.elapsed_ms_ = 0
         clock = self.pipeline_.get_clock()
         now = clock.get_time()
-        self.gaudi_id_ = clock.new_periodic_id(now, 40*Gst.MSECOND)
+        self.gaudi_id_ = clock.new_periodic_id(now, 20*Gst.MSECOND)
         clock.id_wait_async(self.gaudi_id_, self.die_gaudi, now)
 
     def stop_timer(self):
@@ -153,10 +153,8 @@ class R3Ari():
         if not self.state_ == State.idle:
             return
 
-        self.info("starting...")
         self.state_ = State.started
         self.updateMessage("Applaus!")
-
         self.serial_write('l')
         self.start_timer()
 
@@ -164,7 +162,6 @@ class R3Ari():
         if not self.state_ == State.started:
             return
 
-        self.info("running...")
         self.state_ = State.running
         self.updateMessage(None)
 
@@ -172,17 +169,16 @@ class R3Ari():
         if not self.state_ == State.running:
             return
 
-        self.info("finished...")
         self.state_ = State.finished
-
         self.serial_write('s')
         self.stop_timer()
-        self.updateMessage(self.elapsed_ms_)
+        m = int(self.elapsed_ms_/60000)
+        s = int((self.elapsed_ms_%60000)/1000)
+        ms = int((self.elapsed_ms_%1000)/100)
+        self.updateMessage("%02i:%02i.%i" % (m, s, ms))
 
     def vagess_mas(self):
-        self.info("idle...")
         self.state_ = State.idle
-
         self.serial_write('s')
         self.stop_timer()
         self.updateMessage(None)
@@ -191,7 +187,7 @@ class R3Ari():
     def die_gaudi(self, clock, now, start, _):
         if self.state_ == State.started or self.state_ == State.running:
             self.elapsed_ms_ = (now-start)/Gst.MSECOND
-            if self.elapsed_ms_ > 4000:
+            if self.elapsed_ms_ >= 4000:
                 self.los_lei_lafen()
                 return True
             elif self.elapsed_ms_ > 2000:
@@ -220,7 +216,6 @@ class R3Ari():
     def open_serial_device(self):
         import serial
 
-        self.info("opening '%s'" % (self.serial_device_name_))
         try:
             dev = serial.Serial(port=self.serial_device_name_, timeout=0.001)
             dev.flushInput()
@@ -400,7 +395,7 @@ class R3Ari():
 
         svg += "  <rect x='%i' y='%i' rx='%i' ry='%i' width='%i' height='%i' style='fill:black;opacity:%f' />\n" %(
             box_x, box_y, 0.5*self.msg_spacing_, 0.5*self.msg_spacing_, box_w, box_h, 0.5*opacity)
-        svg += "  <text text-anchor='middle' dy='-0.25em' x='%i' y='%i' fill='white' " %(text_x, text_y)
+        svg += "  <text text-anchor='middle' dy='-0.17em' x='%i' y='%i' fill='white' " %(text_x, text_y)
         svg += "style='font-size: %i; font-family: Ubuntu; font-weight: bold; fill-opacity: %f'" %(text_size, opacity)
         svg += ">%s</text>\n" % (msg)
 
