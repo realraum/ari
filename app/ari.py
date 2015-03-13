@@ -65,7 +65,7 @@ class R3Ari():
         self.msg_width_ = 0.7*self.video_width_
         self.msg_height_ = 0.3*self.video_height_
 
-        self.lvl_th_ = 0.3
+        self.lvl_th_ = 0.4
         self.lvl_pkttl_ = 300000000
         self.lvl_pkfalloff_ = 15
 
@@ -121,8 +121,12 @@ class R3Ari():
                 self.win_.fullscreen()
             else:
                 self.win_.unfullscreen()
+
         elif event.keyval == Gdk.KEY_space:
             self.start_die_gaudi()
+
+        elif event.keyval == Gdk.KEY_S:
+            self.stueh_und_staad()
 
         elif event.keyval == Gdk.KEY_R:
             self.vagess_mas()
