@@ -44,7 +44,7 @@ class State(Enum):
 
 class R3Ari():
 
-    def __init__(self, width=1280, height=720):
+    def __init__(self):
         GObject.threads_init()
         Gdk.init([])
         Gtk.init([])
@@ -55,8 +55,8 @@ class R3Ari():
         self.watch_id_ = None
         self.gaudi_id_ = None
 
-        self.video_width_ = width
-        self.video_height_ = height
+        self.video_width_ = 1280
+        self.video_height_ = 720
         self.vu_width_ = 0.75*self.video_width_
         self.vu_height_ = 0.03*self.video_height_
         self.vu_spacing_ =  0.4*self.vu_height_
@@ -351,6 +351,7 @@ class R3Ari():
             self.vsink_.set_window_handle(xid)
 
             self.pipeline_.set_state(Gst.State.PLAYING)
+            self.win_.fullscreen()
             Gtk.main()
 
         except GObject.GError, e:
@@ -456,6 +457,5 @@ class R3Ari():
 
 
 if __name__ == '__main__':
-#    a = R3Ari()
-    a = R3Ari(width=1024, height=576)
+    a = R3Ari()
     a.run()
