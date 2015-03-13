@@ -24,7 +24,7 @@
 
 NAME := ari
 BOARD_TYPE := teenstep
-OBJ := $(NAME).o pump.o
+OBJ := $(NAME).o pump.o rgb.o
 LIBS := util led lufa-descriptor-usbserial usbio
 EXTERNAL_LIBS := lufa
 SPREADAVR_PATH := ../contrib/avr-utils

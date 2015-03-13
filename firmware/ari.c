@@ -32,14 +32,14 @@
 #include "usbio.h"
 
 #include "pump.h"
-
+#include "rgb.h"
 
 void handle_cmd(uint8_t cmd)
 {
   switch(cmd) {
-  case '+': pump_start(in); break;
-  case '-': pump_start(out); break;
-  case 's': pump_stop(); break;
+  case '+': pump_start(in); rgb_start(); break;
+  case '-': pump_start(out); rgb_start(); break;
+  case 's': pump_stop(); rgb_stop();  break;
   case '!': reset2bootloader(); break;
   default: printf("error\r\n"); return;
   }
@@ -57,6 +57,7 @@ int main(void)
   pump_init();
   usbio_init();
   pump_init();
+  rgb_init();
   sei();
 
   for(;;) {
@@ -71,5 +72,6 @@ int main(void)
 
     usbio_task();
     pump_task();
+//    rgb_task();
   }
 }
