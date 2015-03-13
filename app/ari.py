@@ -128,6 +128,9 @@ class R3Ari():
         elif event.keyval == Gdk.KEY_R:
             self.vagess_mas()
 
+        elif event.keyval == Gdk.KEY_X:
+            Gtk.main_quit()
+
     def on_window_state_change(self, win, event):
         self.win_is_fullscreen_ = bool(Gdk.WindowState.FULLSCREEN & event.new_window_state)
 
@@ -139,7 +142,7 @@ class R3Ari():
 
         self.info("starting...")
         self.state_ = State.started
-        self.msg_overlay_.set_property("data", self.getMessageSVG("Applaus!"))
+        self.updateMessage("Applaus!")
 
         self.serial_write('l')
 
@@ -171,7 +174,7 @@ class R3Ari():
 #            clock.id_unref(self.gaudi_id_)
             self.gaudi_id_ = None
 
-        self.msg_overlay_.set_property("data", self.getMessageSVG("FIN"))
+        self.updateMessage("FIN")
 
     def vagess_mas(self):
         self.info("idle...")
@@ -196,7 +199,7 @@ class R3Ari():
                 return False
             elif msecs > 2000:
                 o = 1.0 - (msecs - 2000)/2000.0
-                self.msg_overlay_.set_property("data", self.getMessageSVG("Applaus!", o))
+                self.updateMessage("Applaus!", o)
                 return True
 
         return False
@@ -253,7 +256,7 @@ class R3Ari():
         self.pipeline_.add(conv_vscaled)
 
         self.vu_overlay_ = Gst.ElementFactory.make("rsvgoverlay")
-        self.vu_overlay_.set_property("data", self.getVumeterSVG(0, 0, 0, 0))
+        self.updateMeter(0, 0, 0, 0)
         self.pipeline_.add(self.vu_overlay_)
         self.msg_overlay_ = Gst.ElementFactory.make("rsvgoverlay")
         self.msg_overlay_.set_property("data", "")
@@ -386,7 +389,7 @@ class R3Ari():
         return x/90.0
 
 
-    def getMessageSVG(self, msg, opacity=1.0):
+    def getMessageSVG(self, msg, opacity):
         svg = "<svg>\n"
 
         box_w = self.msg_width_
@@ -407,6 +410,9 @@ class R3Ari():
 
         return svg
 
+    def updateMessage(self, msg, opacity=1.0):
+        self.msg_overlay_.set_property("data", self.getMessageSVG(msg, opacity))
+        return True
 
     def getVumeterSVG(self, l, lp, r, rp):
         max = lp if lp > rp else rp
