@@ -75,7 +75,6 @@ class R3Ari():
 
         self.state_ = State.idle
 
-
     def info(self, message, arg=None):
         print "INFO: %s (%s)" % (message, arg)
 
@@ -366,7 +365,8 @@ class R3Ari():
                 self.pipeline_.get_bus().disconnect(self.watch_id_)
                 self.pipeline_.get_bus().remove_signal_watch()
                 self.pipeline_.set_state(Gst.State.NULL)
-
+            if self.serial_device_:
+                self.serial_device_.write('s')
 
     def decoder_callback(self, decoder, srcpad, sinks):
         for name, sinkpad in sinks.items():
