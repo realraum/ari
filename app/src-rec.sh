@@ -25,7 +25,5 @@
 
 GST_LAUNCH=gst-launch-1.0
 PORT=1234
-RECORD_D=/srv/piday15
-FILENAME=`date +%Y-%m-%d_%H-%M-%S`
 
-$GST_LAUNCH tcpclientsrc host=localhost port=$PORT ! queue ! gdpdepay ! filesink location=$RECORD_D/$FILENAME.mkv
+$GST_LAUNCH filesrc name=src location=$1 ! matroskaparse ! gdppay ! tcpserversink port=$PORT
