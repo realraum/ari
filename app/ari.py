@@ -44,7 +44,8 @@ class State(Enum):
 
 class R3Ari():
 
-    def __init__(self):
+    def __init__(self, host="localhost", port="1234", width=1280, height=720,
+                 serial_device='/dev/ttyACM0', threshold=0.60, ttl=300000000, falloff=25):
         GObject.threads_init()
         Gdk.init([])
         Gtk.init([])
@@ -55,8 +56,11 @@ class R3Ari():
         self.watch_id_ = None
         self.gaudi_id_ = None
 
-        self.video_width_ = 1280
-        self.video_height_ = 720
+        self.src_host_ = host
+        self.src_port_ = port
+
+        self.video_width_ = width
+        self.video_height_ = height
         self.vu_width_ = 0.75*self.video_width_
         self.vu_height_ = 0.03*self.video_height_
         self.vu_spacing_ =  0.4*self.vu_height_
@@ -65,11 +69,11 @@ class R3Ari():
         self.msg_width_ = 0.7*self.video_width_
         self.msg_height_ = 0.3*self.video_height_
 
-        self.lvl_th_ = 0.60
-        self.lvl_pkttl_ = 300000000
-        self.lvl_pkfalloff_ = 25
+        self.lvl_th_ = threshold
+        self.lvl_pkttl_ = ttl
+        self.lvl_pkfalloff_ = falloff
 
-        self.serial_device_name_ = '/dev/ttyACM0'
+        self.serial_device_name_ = None
         self.serial_device_ = None
         self.serial_write_pending_ = ''
 
@@ -301,7 +305,7 @@ class R3Ari():
     def create_pipeline(self):
         self.pipeline_ = Gst.Pipeline.new()
 
-        source = "tcpclientsrc host=localhost port=1234 ! queue ! gdpdepay"
+        source = "tcpclientsrc host=%s port=%s ! queue ! gdpdepay" % (self.src_host_, self.src_port_)
         source_bin = Gst.parse_bin_from_description(source, "source")
         self.pipeline_.add(source_bin)
         decoder = Gst.ElementFactory.make("decodebin")
@@ -338,10 +342,11 @@ class R3Ari():
 
     def run(self):
         try:
-            self.serial_device_ = self.open_serial_device()
-            if not self.serial_device_:
-                return
-            self.serial_write('s')
+            if(self.serial_device_name_):
+                self.serial_device_ = self.open_serial_device()
+                if not self.serial_device_:
+                    return
+                self.serial_write('s')
 
             self.create_pipeline()
             xid = self.create_window()
@@ -463,5 +468,5 @@ class R3Ari():
 
 
 if __name__ == '__main__':
-    a = R3Ari()
+    a = R3Ari(serial_device=None)
     a.run()

@@ -1,11 +1,26 @@
 Dependencies
 ============
 
+App:
+----
+
+python-enum
+python-gi
+gir1.2-gtk-3.0
+python-gst-1.0
+gstreamer1.0-plugins-base
+gstreamer1.0-plugins-good
+gstreamer1.0-plugins-bad
+
+
+Firmware:
+---------
+
 spreadspace avr utils (and everything these depend on)
 
 
-Build
-=====
+Firmware-Build
+==============
 
 Getting the source via GIT:
 ---------------------------
