@@ -44,7 +44,7 @@ class State(Enum):
 
 class R3Ari():
 
-    def __init__(self, host="localhost", port="1234", width=1280, height=720,
+    def __init__(self, host="localhost", port=1234, width=1280, height=720,
                  serial_device='/dev/ttyACM0', threshold=0.60, ttl=300000000, falloff=25):
         GObject.threads_init()
         Gdk.init([])
@@ -73,7 +73,7 @@ class R3Ari():
         self.lvl_pkttl_ = ttl
         self.lvl_pkfalloff_ = falloff
 
-        self.serial_device_name_ = None
+        self.serial_device_name_ = serial_device
         self.serial_device_ = None
         self.serial_write_pending_ = ''
 
@@ -305,7 +305,7 @@ class R3Ari():
     def create_pipeline(self):
         self.pipeline_ = Gst.Pipeline.new()
 
-        source = "tcpclientsrc host=%s port=%s ! queue ! gdpdepay" % (self.src_host_, self.src_port_)
+        source = "tcpclientsrc host=%s port=%i ! queue ! gdpdepay" % (self.src_host_, self.src_port_)
         source_bin = Gst.parse_bin_from_description(source, "source")
         self.pipeline_.add(source_bin)
         decoder = Gst.ElementFactory.make("decodebin")
@@ -468,5 +468,103 @@ class R3Ari():
 
 
 if __name__ == '__main__':
-    a = R3Ari(serial_device=None)
+    usage = '''
+realraum Audience Reaction Indicator.
+Usage:
+    ari.py [options]
+
+Options:
+    -h, --help              this help message.
+    -v, --version           version info.
+    --host=H                the hostname of the source stream (default: localhost).
+    --port=P                the port of the source stream (default: 1234).
+    --width=W               the width of the video window (default: 1280).
+    --height=H              the height of the video window (default: 720).
+    --serial-device=D       the serial device to the robot (default: /dev/ttyACM0).
+    --no-robot              don't connect to the robot.
+    --threshold=T           the audio level threshold 0.0-1.0 (default: 0.60).
+    --ttl=T                 the audio level peak ttl in ns (default: 300000000).
+    --falloff=F             the audio level peak fall in db/sec (default: 25).
+'''
+
+    host = "localhost"
+    port = 1234
+    width = 1280
+    height = 720
+    serial_device = '/dev/ttyACM0'
+    threshold = 0.60
+    ttl = 300000000
+    falloff = 25
+    try:
+        opts, args = getopt.getopt(sys.argv[1:], "hv", ["help", "version", "host=", "port=", "width=", "height=",
+                                                        "serial-device=", "no-robot",
+                                                        "threshold=", "ttl=", "falloff=" ])
+        for o, a in opts:
+            if o in ("-h", "--help"):
+                print >> sys.stderr, usage
+                sys.exit(0)
+            elif o in ("-v", "--version"):
+                print >> sys.stderr, "realraum ari Version 1.0"
+                print >> sys.stderr, "  using Gstreamer Version %d.%d.%d.%d" % Gst.version()
+                sys.exit(0)
+            elif o == "--host":
+                host = a
+            elif o == "--port":
+                try:
+                    port = int(a)
+                    if port < 1 or port > 65535:
+                        raise getopt.GetoptError('port must be a number between 1 and 65535', o)
+                except ValueError:
+                    raise getopt.GetoptError('port must be a number between 1 and 65535', o)
+            elif o == "--width":
+                try:
+                    width = int(a)
+                    if width < 0:
+                        raise getopt.GetoptError('width must be a positive number', o)
+                except ValueError:
+                    raise getopt.GetoptError('width must be a positive number', o)
+            elif o == "--height":
+                try:
+                    height = int(a)
+                    if height < 0:
+                        raise getopt.GetoptError('height must be a positive number', o)
+                except ValueError:
+                    raise getopt.GetoptError('height must be a positive number', o)
+            elif o == "--serial-device":
+                serial_device = a
+            elif o == "--no-robot":
+                serial_device = None
+            elif o == "--threshold":
+                try:
+                    threshold = float(a)
+                    if threshold < 0.0 or threshold > 1.0:
+                        raise getopt.GetoptError('threshold must be a number between 0.0 and 1.0', o)
+                except ValueError:
+                    raise getopt.GetoptError('threshold must be a number between 0.0 and 1.0', o)
+            elif o == "--ttl":
+                try:
+                    ttl = int(a)
+                    if ttl < 0:
+                        raise getopt.GetoptError('ttl must be a positive number', o)
+                except ValueError:
+                    raise getopt.GetoptError('ttl must be a positive number', o)
+            elif o == "--falloff":
+                try:
+                    falloff = int(a)
+                    if falloff < 0:
+                        raise getopt.GetoptError('falloff must be a positive number', o)
+                except ValueError:
+                    raise getopt.GetoptError('falloff must be a positive number', o)
+
+        if len(args) > 1:
+            raise getopt.GetoptError('Too many arguments')
+
+    except getopt.GetoptError, msg:
+        print >> sys.stderr, "ERROR: %s" % msg
+        print >> sys.stderr, usage
+        sys.exit(2)
+
+
+    a = R3Ari(host=host, port=port, width=width, height=height, serial_device=serial_device,
+              threshold=threshold, ttl=ttl, falloff=falloff)
     a.run()
