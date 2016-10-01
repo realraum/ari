@@ -133,13 +133,13 @@ class R3Ari():
         elif event.keyval == Gdk.KEY_space:
             self.start_die_gaudi()
 
-        elif event.keyval == Gdk.KEY_S:
+        elif event.keyval == Gdk.KEY_s:
             self.stueh_und_staad()
 
-        elif event.keyval == Gdk.KEY_R:
+        elif event.keyval == Gdk.KEY_r:
             self.vagess_mas()
 
-        elif event.keyval == Gdk.KEY_X:
+        elif event.keyval == Gdk.KEY_x:
             Gtk.main_quit()
 
     def on_window_state_change(self, win, event):
@@ -359,7 +359,7 @@ class R3Ari():
             self.vsink_.set_window_handle(xid)
 
             self.pipeline_.set_state(Gst.State.PLAYING)
-#            self.win_.fullscreen()
+            self.win_.fullscreen()
             Gtk.main()
 
         except GObject.GError, e:
