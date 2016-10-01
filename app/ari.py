@@ -81,6 +81,7 @@ class R3Ari():
         self.serial_write_pending_ = ''
 
         self.state_ = State.idle
+        self.start_time = 0
 
     def info(self, message, arg=None):
         print "INFO: %s (%s)" % (message, arg)
@@ -149,9 +150,9 @@ class R3Ari():
     def start_timer(self):
         self.elapsed_ms_ = 0
         clock = self.pipeline_.get_clock()
-        now = clock.get_time()
-        self.gaudi_id_ = clock.new_periodic_id(now, 20*Gst.MSECOND)
-        clock.id_wait_async(self.gaudi_id_, self.die_gaudi, now)
+        self.start_time = clock.get_time()
+        self.gaudi_id_ = clock.new_periodic_id(self.start_time, 20*Gst.MSECOND)
+        clock.id_wait_async(self.gaudi_id_, self.die_gaudi)
 
     def stop_timer(self):
         if self.gaudi_id_:
@@ -195,9 +196,9 @@ class R3Ari():
         self.updateMessage(None)
 
 
-    def die_gaudi(self, clock, now, start, _):
+    def die_gaudi(self, clock, now, _):
         if self.state_ == State.started or self.state_ == State.running:
-            self.elapsed_ms_ = (now-start)/Gst.MSECOND
+            self.elapsed_ms_ = (now-self.start_time)/Gst.MSECOND
             if self.elapsed_ms_ >= 4000:
                 self.los_lei_lafen()
                 return True
@@ -358,7 +359,7 @@ class R3Ari():
             self.vsink_.set_window_handle(xid)
 
             self.pipeline_.set_state(Gst.State.PLAYING)
-            self.win_.fullscreen()
+#            self.win_.fullscreen()
             Gtk.main()
 
         except GObject.GError, e:
