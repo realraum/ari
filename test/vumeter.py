@@ -25,6 +25,7 @@
 
 import sys
 import getopt
+import pprint
 
 import gi
 gi.require_version('Gst', '1.0')
@@ -45,6 +46,7 @@ class R3Ari():
         self.channels_ = channels
         self.mainloop_ = GObject.MainLoop()
         self.pipeline_ = None
+        self.pp = pprint.PrettyPrinter(indent=4)
 
     def error(self, message, arg=None):
         print "ERROR: %s (%s)" % (message, arg)
@@ -67,7 +69,7 @@ class R3Ari():
 
     def run(self):
         try:
-            s = 'alsasrc device=%s ! audio/x-raw,channels=%i ! level message=true ! fakesink' % (self.device_, self.channels_)
+            s = 'autoaudiosrc ! audio/x-raw,channels=%i ! level message=true ! fakesink' % (self.channels_)
             self.pipeline_ = Gst.parse_launch(s)
             self.pipeline_.get_bus().add_signal_watch()
             self.watch_id_ = self.pipeline_.get_bus().connect('message::element', self.on_message)

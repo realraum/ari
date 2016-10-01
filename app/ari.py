@@ -28,7 +28,10 @@ import getopt
 from enum import Enum
 
 import gi
+gi.require_version('Gtk', '3.0')
+gi.require_version('Gdk', '3.0')
 gi.require_version('Gst', '1.0')
+gi.require_version('GstVideo', '1.0')
 from gi.repository import GObject
 from gi.repository import Gdk
 from gi.repository import GdkX11
